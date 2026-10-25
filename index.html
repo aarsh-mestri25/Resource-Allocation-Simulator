@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Resource Allocation Simulator</title>
+<style>
+:root{--bg:#eef7f5;--card:#fff;--ink:#14302f;--muted:#587270;--head:#12343b;--primary:#0f9d8a;--sec:#5f7480;--th:#d3f0ea;--line:#d5e4e0;--bad:#b3243b;--good:#1c7c3f;--hl:#fff1c9;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1a1c;--card:#14282b;--ink:#e3f3f0;--muted:#8fb0ab;--head:#071214;--th:#1f4a47;--line:#25403f;--hl:#4a3d14;--bad:#ff7a8f;--good:#5fd68a}}
+:root[data-theme="dark"]{--bg:#0c1a1c;--card:#14282b;--ink:#e3f3f0;--muted:#8fb0ab;--head:#071214;--th:#1f4a47;--line:#25403f;--hl:#4a3d14;--bad:#ff7a8f;--good:#5fd68a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;font-size:14px}
+header{background:linear-gradient(120deg,var(--head),#1b5e63);border-bottom:4px solid var(--primary);color:#fff;text-align:center;padding:28px 16px}
+header h1{margin:0 0 6px;font-size:26px}
+header p{margin:0;font-size:12px;opacity:.85}
+.wrap{max-width:1100px;margin:20px auto;padding:0 16px;display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+@media(max-width:760px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:10px;border-top:4px solid var(--primary);padding:20px;box-shadow:0 2px 10px rgba(20,35,80,.1)}
+h2{margin:0 0 14px;font-size:18px}
+label{display:block;font-weight:600;font-size:12px;margin:12px 0 5px}
+input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font-size:13px}
+small{color:var(--muted);font-size:11px}
+button{width:100%;margin-top:12px;padding:10px;border:0;border-radius:6px;color:#fff;font-size:13px;cursor:pointer}
+#sim{background:var(--primary)}#rst{background:var(--sec);margin-top:8px}
+button:hover{opacity:.9}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:6px}
+th{background:var(--th);padding:9px 8px}
+td{padding:8px;text-align:center;border-bottom:1px solid var(--line)}
+td.hl{background:var(--hl);font-weight:700}
+.alloc{color:var(--good);font-weight:700}.rej{color:var(--bad);font-weight:700}
+.res p{margin:7px 0}
+.err{color:var(--bad);font-weight:600}
+h3{margin:18px 0 8px;font-size:15px}
+.best{background:var(--hl);font-weight:700}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<header><h1>Resource Allocation Simulator</h1><p>Compare First-Fit, Best-Fit and Worst-Fit Algorithms</p></header>
+<div class="wrap">
+  <div class="card">
+    <h2>Input Parameters</h2>
+    <label for="srv">Server Capacities (GB)</label>
+    <input id="srv" placeholder="e.g. 8,5,10,6">
+    <label for="tsk">Task Requirements (GB)</label>
+    <input id="tsk" placeholder="e.g. 5,4,7,3,6">
+    <small>Separate values with commas or spaces.</small>
+    <label for="alg">Select Algorithm</label>
+    <select id="alg"><option value="first">First-Fit</option><option value="best">Best-Fit</option><option value="worst">Worst-Fit</option><option value="all">Compare All</option></select>
+    <button id="sim">Simulate</button>
+    <button id="rst">Reset</button>
+  </div>
+  <div class="card">
+    <h2>Simulation Process</h2>
+    <div id="out" class="muted">Simulation results will appear here.</div>
+  </div>
+</div>
+<script>
+const NAMES={first:"First-Fit",best:"Best-Fit",worst:"Worst-Fit"};
+const $=id=>document.getElementById(id);
+function parse(s){return s.split(/[\s,]+/).filter(Boolean).map(Number)}
+function run(alg,servers,tasks){
+  const rem=servers.slice(),rows=[];let ok=0;
+  tasks.forEach((t,i)=>{
+    let idx=-1;
+    rem.forEach((c,j)=>{
+      if(c<t)return;
+      if(alg==="first"){if(idx<0)idx=j}
+      else if(alg==="best"){if(idx<0||c<rem[idx])idx=j}
+      else{if(idx<0||c>rem[idx])idx=j}
+    });
+    if(idx>=0){rem[idx]-=t;ok++}
+    rows.push({n:i+1,t,idx,snap:rem.slice()});
+  });
+  const total=servers.reduce((a,b)=>a+b,0),left=rem.reduce((a,b)=>a+b,0);
+  const active=rem.filter((c,j)=>c<servers[j]).length;
+  const wasted=rem.reduce((a,c,j)=>a+(c<servers[j]?c:0),0);
+  return{alg,rows,ok,rej:tasks.length-ok,n:tasks.length,util:(total-left)/total*100,active,wasted,rem};
+}
+function pct(x){return x.toFixed(2)+"%"}
+function detail(r,servers){
+  let h='<div class="scroll"><table><tr><th>Task</th><th>Request</th>'+servers.map((_,i)=>`<th>S${i+1}</th>`).join("")+'<th>Placed On</th><th>Result</th></tr>';
+  r.rows.forEach(x=>{
+    h+=`<tr><td>T${x.n}</td><td>${x.t} GB</td>`+x.snap.map((c,j)=>`<td class="${j===x.idx?"hl":""}">${c}</td>`).join("")+
+    `<td>${x.idx>=0?"S"+(x.idx+1):"-"}</td><td class="${x.idx>=0?"alloc":"rej"}">${x.idx>=0?"Allocated":"Rejected"}</td></tr>`;
+  });
+  h+='</table></div><small>Table cells show each server\'s remaining capacity after the task; the highlighted cell is the server chosen.</small>';
+  h+=`<h3>Final Results</h3><div class="res"><p>Algorithm: ${NAMES[r.alg]}</p><p>Tasks Allocated: ${r.ok}</p><p>Tasks Rejected: ${r.rej}</p><p>Success Rate: ${pct(r.ok/r.n*100)}</p><p>Rejection Rate: ${pct(r.rej/r.n*100)}</p><p>Resource Utilization: ${pct(r.util)}</p><p>Active Servers: ${r.active} of ${r.rem.length}</p><p>Fragmentation (unused capacity on active servers): ${r.wasted} GB</p></div>`;
+  return h;
+}
+$("sim").onclick=()=>{
+  const servers=parse($("srv").value),tasks=parse($("tsk").value),out=$("out");
+  if(!servers.length||!tasks.length||[...servers,...tasks].some(v=>!isFinite(v)||v<=0)){
+    out.className="err";out.textContent="Please enter valid positive numbers for both servers and tasks.";return}
+  out.className="";
+  const a=$("alg").value;
+  if(a!=="all"){out.innerHTML=detail(run(a,servers,tasks),servers);return}
+  const rs=["first","best","worst"].map(k=>run(k,servers,tasks));
+  const bu=Math.max(...rs.map(r=>r.util));
+  let h='<div class="scroll"><table><tr><th>Metric</th>'+rs.map(r=>`<th>${NAMES[r.alg]}</th>`).join("")+'</tr>';
+  const row=(l,f)=>`<tr><td><b>${l}</b></td>`+rs.map(r=>`<td>${f(r)}</td>`).join("")+"</tr>";
+  h+=row("Allocated",r=>r.ok)+row("Rejected",r=>r.rej)+row("Success Rate",r=>pct(r.ok/r.n*100))+
+     row("Utilization",r=>`<span class="${r.util===bu?"alloc":""}">${pct(r.util)}</span>`)+row("Active Servers",r=>r.active)+row("Fragmentation (GB)",r=>r.wasted)+"</table></div>";
+  rs.forEach(r=>{h+=`<h3>${NAMES[r.alg]} - Step by Step</h3>`+detail(r,servers).replace(/<h3>Final Results[\s\S]*$/,"")});
+  out.innerHTML=h;
+};
+$("rst").onclick=()=>{$("srv").value="";$("tsk").value="";$("alg").value="first";const o=$("out");o.className="muted";o.textContent="Simulation results will appear here."};
+</script>
+</body>
+</html>
