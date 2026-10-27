@@ -1,113 +1,573 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Resource Allocation Simulator</title>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Smart Cloud Resource Allocation Simulator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-:root{--bg:#eef7f5;--card:#fff;--ink:#14302f;--muted:#587270;--head:#12343b;--primary:#0f9d8a;--sec:#5f7480;--th:#d3f0ea;--line:#d5e4e0;--bad:#b3243b;--good:#1c7c3f;--hl:#fff1c9;
-box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1a1c;--card:#14282b;--ink:#e3f3f0;--muted:#8fb0ab;--head:#071214;--th:#1f4a47;--line:#25403f;--hl:#4a3d14;--bad:#ff7a8f;--good:#5fd68a}}
-:root[data-theme="dark"]{--bg:#0c1a1c;--card:#14282b;--ink:#e3f3f0;--muted:#8fb0ab;--head:#071214;--th:#1f4a47;--line:#25403f;--hl:#4a3d14;--bad:#ff7a8f;--good:#5fd68a}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;font-size:14px}
-header{background:linear-gradient(120deg,var(--head),#1b5e63);border-bottom:4px solid var(--primary);color:#fff;text-align:center;padding:28px 16px}
-header h1{margin:0 0 6px;font-size:26px}
-header p{margin:0;font-size:12px;opacity:.85}
-.wrap{max-width:1100px;margin:20px auto;padding:0 16px;display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
-@media(max-width:760px){.wrap{grid-template-columns:1fr}}
-.card{background:var(--card);border-radius:10px;border-top:4px solid var(--primary);padding:20px;box-shadow:0 2px 10px rgba(20,35,80,.1)}
-h2{margin:0 0 14px;font-size:18px}
-label{display:block;font-weight:600;font-size:12px;margin:12px 0 5px}
-input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font-size:13px}
-small{color:var(--muted);font-size:11px}
-button{width:100%;margin-top:12px;padding:10px;border:0;border-radius:6px;color:#fff;font-size:13px;cursor:pointer}
-#sim{background:var(--primary)}#rst{background:var(--sec);margin-top:8px}
-button:hover{opacity:.9}
-.scroll{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:6px}
-th{background:var(--th);padding:9px 8px}
-td{padding:8px;text-align:center;border-bottom:1px solid var(--line)}
-td.hl{background:var(--hl);font-weight:700}
-.alloc{color:var(--good);font-weight:700}.rej{color:var(--bad);font-weight:700}
-.res p{margin:7px 0}
-.err{color:var(--bad);font-weight:600}
-h3{margin:18px 0 8px;font-size:15px}
-.best{background:var(--hl);font-weight:700}
-.muted{color:var(--muted)}
+/* Layout: fixed left rail for navigation, one working view to its right; rail becomes a scrolling tab strip on phones. */
+:root {
+  --bg: #e9edf2; --surface: #f7f9fb; --raised: #ffffff; --ink: #15202b; --muted: #556474; --line: #d0d8e1;
+  --accent: #2b4bd1; --accent-soft: #dfe5fb; --good: #1c7f55; --good-soft: #d9efe4; --warn: #a96a0c; --warn-soft: #f6e8cc;
+  --bad: #bb3535; --bad-soft: #f6dcdc;
+  --s-first: #2b4bd1; --s-best: #0c8782; --s-worst: #c9701a; --s-random: #8248c0; --s-balanced: #c0366a;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e141b; --surface: #151d26; --raised: #1b2531; --ink: #e5eaf0; --muted: #95a3b3; --line: #2a3745;
+    --accent: #8097ff; --accent-soft: #232f58; --good: #52c68d; --good-soft: #1a3a2d; --warn: #e3a547; --warn-soft: #3d2f14;
+    --bad: #f08585; --bad-soft: #432324;
+    --s-first: #8097ff; --s-best: #3cc4bd; --s-worst: #f0a24e; --s-random: #b98aef; --s-balanced: #f06b9c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e141b; --surface: #151d26; --raised: #1b2531; --ink: #e5eaf0; --muted: #95a3b3; --line: #2a3745;
+  --accent: #8097ff; --accent-soft: #232f58; --good: #52c68d; --good-soft: #1a3a2d; --warn: #e3a547; --warn-soft: #3d2f14;
+  --bad: #f08585; --bad-soft: #432324;
+  --s-first: #8097ff; --s-best: #3cc4bd; --s-worst: #f0a24e; --s-random: #b98aef; --s-balanced: #f06b9c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { text-wrap: balance; }
+button, input, select { font: inherit; color: inherit; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100%; }
+.rail { padding: 20px 16px 20px max(16px, env(safe-area-inset-left, 0px)); border-right: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; gap: 22px; }
+.brand b { display: block; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.brand span { font-family: var(--font-data); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav a { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; color: var(--muted); text-decoration: none; font-weight: 500; }
+.nav a:hover { background: var(--accent-soft); color: var(--ink); }
+.nav a[aria-current="page"] { background: var(--accent); color: #fff; }
+:root[data-theme="dark"] .nav a[aria-current="page"] { color: #0e141b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .nav a[aria-current="page"] { color: #0e141b; } }
+.nav a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.about { font-size: 12px; color: var(--muted); margin-top: auto; line-height: 1.5; }
+.main { padding: 24px max(24px, env(safe-area-inset-right, 0px)) 40px 24px; min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+.head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 16px; }
+.head h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.head p { color: var(--muted); max-width: 62ch; }
+.eyebrow { font-family: var(--font-data); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.panel h2 { font-size: 15px; font-weight: 600; }
+.panel .sub { color: var(--muted); font-size: 13px; }
+.stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.stat { padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; border-left: 1px solid var(--line); min-width: 0; }
+.stat:first-child { border-left: 0; }
+.stat .v { font-family: var(--font-data); font-size: 26px; font-weight: 500; line-height: 1.1; letter-spacing: -0.02em; }
+.stat .s { font-size: 12px; color: var(--muted); }
+.stat.bad .v { color: var(--bad); }
+.stat.good .v { color: var(--good); }
+.servers { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.srv { background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; transition: border-color .15s, opacity .15s, box-shadow .15s; }
+.srv header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.srv h3 { font-size: 14px; font-weight: 600; }
+.srv.off { opacity: .55; }
+.srv.elig { border-color: var(--good); }
+.srv.inelig { opacity: .5; }
+.srv.picked { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); opacity: 1; }
+.pill { font-family: var(--font-data); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+.pill.active, .pill.allocated { background: var(--good-soft); color: var(--good); }
+.pill.idle, .pill.waiting { background: var(--warn-soft); color: var(--warn); }
+.pill.off { background: var(--line); color: var(--muted); }
+.pill.rejected { background: var(--bad-soft); color: var(--bad); }
+.meter { display: flex; flex-direction: column; gap: 4px; }
+.mrow { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
+.mrow .num { color: var(--ink); }
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; transition: width .35s ease; }
+.bar i.hi { background: var(--warn); }
+.bar i.full { background: var(--bad); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; min-height: 22px; }
+.chip { font-family: var(--font-data); font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--ink); }
+.none { color: var(--muted); font-size: 12px; }
+.tablewrap { overflow-x: auto; max-width: 100%; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; }
+th { text-align: left; font-family: var(--font-data); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: 12px; color: var(--muted); }
+input[type=text], input[type=number], select { background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; min-width: 0; }
+input[type=number] { width: 92px; }
+input.w-name { width: 200px; max-width: 100%; }
+td input[type=number] { width: 80px; }
+.btn { background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer; font-weight: 500; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+:root[data-theme="dark"] .btn.primary { color: #0e141b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary { color: #0e141b; } }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.chk { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.err { color: var(--bad); font-size: 12px; min-height: 18px; }
+.split { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.split.even { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.trace { display: flex; flex-direction: column; gap: 8px; }
+.trace .task { font-weight: 600; }
+.tr-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); }
+.tr-row .l { font-weight: 500; }
+.tr-row .d { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+.tr-row.ok { border-color: var(--good); }
+.tr-row.no { opacity: .65; }
+.tr-row.pick { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.verdict { padding: 8px 10px; border-radius: 6px; background: var(--accent-soft); font-size: 13px; }
+.verdict.bad { background: var(--bad-soft); color: var(--bad); }
+.chart { display: flex; flex-direction: column; gap: 8px; }
+.chart h3 { font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.chart h3 span { font-family: var(--font-data); font-weight: 400; font-size: 11px; color: var(--muted); }
+.crow { display: grid; grid-template-columns: 92px minmax(0, 1fr) 56px; gap: 8px; align-items: center; }
+.crow .nm { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crow .val { font-family: var(--font-data); font-size: 12px; text-align: right; }
+.track { height: 14px; border-radius: 3px; background-color: var(--bg); background-image: linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 25% 100%; position: relative; border-right: 1px solid var(--line); }
+.track i { position: absolute; inset: 0 auto 0 0; background: var(--c, var(--accent)); border-radius: 3px; transition: width .35s ease; }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c); margin-right: 6px; }
+td.best { font-weight: 600; color: var(--good); }
+.algo-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; background: var(--c); margin-right: 6px; }
+.alist { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 24px; }
+.alist b { display: block; font-weight: 600; }
+.alist span { color: var(--muted); font-size: 13px; }
+code { font-family: var(--font-data); font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+.note { font-size: 12px; color: var(--muted); }
+@media (max-width: 900px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .rail { border-right: 0; border-bottom: 1px solid var(--line); padding: 14px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); gap: 10px; }
+  .nav { flex-direction: row; overflow-x: auto; }
+  .nav a { white-space: nowrap; }
+  .about { display: none; }
+  .main { padding: 18px max(16px, env(safe-area-inset-right, 0px)) 32px max(16px, env(safe-area-inset-left, 0px)); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(odd) { border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .split, .split.even { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .bar i, .track i, .srv { transition: none; } }
 </style>
-</head>
-<body>
-<header><h1>Resource Allocation Simulator</h1><p>Compare First-Fit, Best-Fit and Worst-Fit Algorithms</p></header>
-<div class="wrap">
-  <div class="card">
-    <h2>Input Parameters</h2>
-    <label for="srv">Server Capacities (GB)</label>
-    <input id="srv" placeholder="e.g. 8,5,10,6">
-    <label for="tsk">Task Requirements (GB)</label>
-    <input id="tsk" placeholder="e.g. 5,4,7,3,6">
-    <small>Separate values with commas or spaces.</small>
-    <label for="alg">Select Algorithm</label>
-    <select id="alg"><option value="first">First-Fit</option><option value="best">Best-Fit</option><option value="worst">Worst-Fit</option><option value="all">Compare All</option></select>
-    <button id="sim">Simulate</button>
-    <button id="rst">Reset</button>
-  </div>
-  <div class="card">
-    <h2>Simulation Process</h2>
-    <div id="out" class="muted">Simulation results will appear here.</div>
-  </div>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="brand"><b>Allocation Simulator</b><span>Smart cloud resource allocation</span></div>
+    <nav class="nav" id="nav" aria-label="Sections"></nav>
+    <p class="about">Simplified model inspired by Dong (2023), "Agent-based cloud simulation model for resource management", Journal of Cloud Computing. It is not the paper's NetLogo simulator.</p>
+  </aside>
+  <main class="main" id="app"></main>
 </div>
+
 <script>
-const NAMES={first:"First-Fit",best:"Best-Fit",worst:"Worst-Fit"};
-const $=id=>document.getElementById(id);
-function parse(s){return s.split(/[\s,]+/).filter(Boolean).map(Number)}
-function run(alg,servers,tasks){
-  const rem=servers.slice(),rows=[];let ok=0;
-  tasks.forEach((t,i)=>{
-    let idx=-1;
-    rem.forEach((c,j)=>{
-      if(c<t)return;
-      if(alg==="first"){if(idx<0)idx=j}
-      else if(alg==="best"){if(idx<0||c<rem[idx])idx=j}
-      else{if(idx<0||c>rem[idx])idx=j}
-    });
-    if(idx>=0){rem[idx]-=t;ok++}
-    rows.push({n:i+1,t,idx,snap:rem.slice()});
-  });
-  const total=servers.reduce((a,b)=>a+b,0),left=rem.reduce((a,b)=>a+b,0);
-  const active=rem.filter((c,j)=>c<servers[j]).length;
-  const wasted=rem.reduce((a,c,j)=>a+(c<servers[j]?c:0),0);
-  return{alg,rows,ok,rej:tasks.length-ok,n:tasks.length,util:(total-left)/total*100,active,wasted,rem};
+const ALGOS = [
+  { id: 'first', name: 'First-Fit', blurb: 'Takes the first server, in list order, that has enough CPU and memory.' },
+  { id: 'best', name: 'Best-Fit', blurb: 'Takes the eligible server with the lowest fit score, so the task fills the tightest gap.' },
+  { id: 'worst', name: 'Worst-Fit', blurb: 'Takes the eligible server with the highest fit score, so the most room stays free after placement.' },
+  { id: 'random', name: 'Random', blurb: 'Takes a random eligible server. Uses a fixed seed so every run repeats.' },
+  { id: 'balanced', name: 'Balanced-Fit', blurb: 'Takes the eligible server whose CPU and memory occupancy end up closest to each other.' }
+];
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
 }
-function pct(x){return x.toFixed(2)+"%"}
-function detail(r,servers){
-  let h='<div class="scroll"><table><tr><th>Task</th><th>Request</th>'+servers.map((_,i)=>`<th>S${i+1}</th>`).join("")+'<th>Placed On</th><th>Result</th></tr>';
-  r.rows.forEach(x=>{
-    h+=`<tr><td>T${x.n}</td><td>${x.t} GB</td>`+x.snap.map((c,j)=>`<td class="${j===x.idx?"hl":""}">${c}</td>`).join("")+
-    `<td>${x.idx>=0?"S"+(x.idx+1):"-"}</td><td class="${x.idx>=0?"alloc":"rej"}">${x.idx>=0?"Allocated":"Rejected"}</td></tr>`;
-  });
-  h+='</table></div><small>Table cells show each server\'s remaining capacity after the task; the highlighted cell is the server chosen.</small>';
-  h+=`<h3>Final Results</h3><div class="res"><p>Algorithm: ${NAMES[r.alg]}</p><p>Tasks Allocated: ${r.ok}</p><p>Tasks Rejected: ${r.rej}</p><p>Success Rate: ${pct(r.ok/r.n*100)}</p><p>Rejection Rate: ${pct(r.rej/r.n*100)}</p><p>Resource Utilization: ${pct(r.util)}</p><p>Active Servers: ${r.active} of ${r.rem.length}</p><p>Fragmentation (unused capacity on active servers): ${r.wasted} GB</p></div>`;
-  return h;
+
+function newUsage(servers) {
+  const u = {};
+  servers.forEach(s => { u[s.id] = { cpu: 0, mem: 0, tasks: [] }; });
+  return u;
 }
-$("sim").onclick=()=>{
-  const servers=parse($("srv").value),tasks=parse($("tsk").value),out=$("out");
-  if(!servers.length||!tasks.length||[...servers,...tasks].some(v=>!isFinite(v)||v<=0)){
-    out.className="err";out.textContent="Please enter valid positive numbers for both servers and tasks.";return}
-  out.className="";
-  const a=$("alg").value;
-  if(a!=="all"){out.innerHTML=detail(run(a,servers,tasks),servers);return}
-  const rs=["first","best","worst"].map(k=>run(k,servers,tasks));
-  const bu=Math.max(...rs.map(r=>r.util));
-  let h='<div class="scroll"><table><tr><th>Metric</th>'+rs.map(r=>`<th>${NAMES[r.alg]}</th>`).join("")+'</tr>';
-  const row=(l,f)=>`<tr><td><b>${l}</b></td>`+rs.map(r=>`<td>${f(r)}</td>`).join("")+"</tr>";
-  h+=row("Allocated",r=>r.ok)+row("Rejected",r=>r.rej)+row("Success Rate",r=>pct(r.ok/r.n*100))+
-     row("Utilization",r=>`<span class="${r.util===bu?"alloc":""}">${pct(r.util)}</span>`)+row("Active Servers",r=>r.active)+row("Fragmentation (GB)",r=>r.wasted)+"</table></div>";
-  rs.forEach(r=>{h+=`<h3>${NAMES[r.alg]} - Step by Step</h3>`+detail(r,servers).replace(/<h3>Final Results[\s\S]*$/,"")});
-  out.innerHTML=h;
+
+// Checks every server for one task and returns the verdict per server plus the chosen one.
+function evaluate(servers, usage, task, algo, rng) {
+  const rows = servers.map(s => {
+    const u = usage[s.id];
+    const aCpu = s.cpu - u.cpu, aMem = s.mem - u.mem;
+    const row = { id: s.id, name: s.name, aCpu, aMem, eligible: false, score: null, imbalance: null, reason: '' };
+    if (s.off) { row.reason = 'powered off'; return row; }
+    const lackC = aCpu < task.cpu, lackM = aMem < task.mem;
+    if (lackC && lackM) row.reason = 'short on CPU (' + aCpu + ') and memory (' + aMem + ')';
+    else if (lackC) row.reason = 'short on CPU (has ' + aCpu + ', needs ' + task.cpu + ')';
+    else if (lackM) row.reason = 'short on memory (has ' + aMem + ', needs ' + task.mem + ')';
+    else {
+      row.eligible = true;
+      row.score = ((aCpu - task.cpu) / aCpu + (aMem - task.mem) / aMem) / 2;
+      row.imbalance = Math.abs((u.cpu + task.cpu) / s.cpu - (u.mem + task.mem) / s.mem);
+    }
+    return row;
+  });
+  const el = rows.filter(r => r.eligible);
+  let pick = null;
+  if (el.length) {
+    switch (algo) {
+      case 'first': pick = el[0]; break;
+      case 'best': pick = el.reduce((a, b) => b.score < a.score ? b : a); break;
+      case 'worst': pick = el.reduce((a, b) => b.score > a.score ? b : a); break;
+      case 'random': pick = el[Math.floor(rng() * el.length)]; break;
+      case 'balanced': pick = el.reduce((a, b) => b.imbalance < a.imbalance ? b : a); break;
+    }
+  }
+  return { rows, pick };
+}
+
+function place(servers, usage, task, algo, rng) {
+  const res = evaluate(servers, usage, task, algo, rng);
+  if (res.pick) {
+    const u = usage[res.pick.id];
+    u.cpu += task.cpu; u.mem += task.mem; u.tasks.push(task.id);
+  }
+  return res;
+}
+
+function runWorkload(servers, tasks, algo, seed) {
+  const usage = newUsage(servers);
+  const rng = mulberry32(seed == null ? 42 : seed);
+  const status = {}, assigned = {};
+  tasks.forEach(t => {
+    const r = place(servers, usage, t, algo, rng);
+    status[t.id] = r.pick ? 'allocated' : 'rejected';
+    assigned[t.id] = r.pick ? r.pick.id : null;
+  });
+  return { usage, status, assigned };
+}
+
+function computeMetrics(servers, tasks, usage, status, p) {
+  p = p || { pIdle: 100, pMax: 250, powerDown: false };
+  const on = servers.filter(s => !s.off);
+  const capCpu = on.reduce((a, s) => a + s.cpu, 0), capMem = on.reduce((a, s) => a + s.mem, 0);
+  let usedCpu = 0, usedMem = 0, power = 0, active = 0;
+  servers.forEach(s => {
+    const u = usage[s.id];
+    usedCpu += u.cpu; usedMem += u.mem;
+    if (s.off) return;
+    if (u.tasks.length) { active++; power += p.pIdle + (p.pMax - p.pIdle) * (u.cpu / s.cpu); }
+    else power += p.powerDown ? 0 : p.pIdle;
+  });
+  const total = tasks.length;
+  const allocated = tasks.filter(t => status[t.id] === 'allocated').length;
+  const rejected = tasks.filter(t => status[t.id] === 'rejected').length;
+  return {
+    total, allocated, rejected, waiting: total - allocated - rejected,
+    successRate: total ? allocated / total * 100 : 0,
+    cpuUtil: capCpu ? usedCpu / capCpu * 100 : 0,
+    memUtil: capMem ? usedMem / capMem * 100 : 0,
+    capCpu, capMem, usedCpu, usedMem, active, power
+  };
+}
+
+
+
+
+const VIEWS = [['dashboard', 'Dashboard'], ['servers', 'Servers'], ['tasks', 'Tasks'], ['simulator', 'Simulator'], ['compare', 'Comparison']];
+const SERIES = { first: 'var(--s-first)', best: 'var(--s-best)', worst: 'var(--s-worst)', random: 'var(--s-random)', balanced: 'var(--s-balanced)' };
+const DEFAULT_SERVERS = [[8, 16], [16, 32], [4, 8], [12, 24]];
+const SAMPLE = [['Video Transcoding', 4, 8], ['Web Frontend', 2, 4], ['Analytics DB', 4, 16], ['Batch ETL', 6, 12], ['Cache Node', 1, 8], ['ML Inference', 8, 16], ['API Gateway', 2, 2], ['Log Indexer', 3, 10], ['Backup Job', 2, 6], ['Render Farm', 10, 12]];
+const OVERLOAD = [['Video Streaming', 8, 12], ['Database Primary', 6, 24], ['ML Training', 12, 20], ['Web Frontend', 2, 4], ['Search Index', 4, 16], ['Batch ETL', 6, 12], ['Cache Cluster', 2, 16], ['Render Job', 10, 10], ['API Gateway', 2, 2], ['Log Pipeline', 4, 8], ['Backup Job', 3, 10], ['Analytics', 8, 18], ['CI Runner', 4, 6], ['Mail Queue', 1, 4], ['Stream Ingest', 6, 8], ['Notification Hub', 1, 2]];
+
+const st = {
+  view: 'dashboard', servers: [], tasks: [], nextSrv: 1, nextTask: 1, algo: 'first', sim: null, trace: null, timer: null, error: '',
+  cmp: { sel: { first: true, best: true, worst: true, random: true, balanced: true }, pIdle: 100, pMax: 250, powerDown: false }
 };
-$("rst").onclick=()=>{$("srv").value="";$("tsk").value="";$("alg").value="first";const o=$("out");o.className="muted";o.textContent="Simulation results will appear here."};
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const pct = v => Math.round(v) + '%';
+const algoName = id => ALGOS.find(a => a.id === id).name;
+const tid = n => 'T' + String(n).padStart(3, '0');
+
+function addServer(cpu, mem) { const n = st.nextSrv++; st.servers.push({ id: n, name: 'Server ' + n, cpu, mem, off: false }); }
+function addTask(name, cpu, mem) { st.tasks.push({ id: tid(st.nextTask++), name, cpu, mem }); }
+function resetServers() { st.servers = []; st.nextSrv = 1; DEFAULT_SERVERS.forEach(d => addServer(d[0], d[1])); }
+function loadTasks(list) { st.tasks = []; st.nextTask = 1; list.forEach(t => addTask(t[0], t[1], t[2])); }
+
+function initSim() {
+  stopAuto();
+  st.sim = { usage: newUsage(st.servers), status: {}, assigned: {}, log: [], rng: mulberry32(42) };
+  st.tasks.forEach(t => { st.sim.status[t.id] = 'waiting'; st.sim.assigned[t.id] = null; });
+  st.trace = null;
+}
+
+function stepSim() {
+  const sim = st.sim;
+  const task = st.tasks.find(t => sim.status[t.id] === 'waiting');
+  if (!task) return false;
+  const res = place(st.servers, sim.usage, task, st.algo, sim.rng);
+  sim.status[task.id] = res.pick ? 'allocated' : 'rejected';
+  sim.assigned[task.id] = res.pick ? res.pick.id : null;
+  sim.log.push({ n: sim.log.length + 1, task, pick: res.pick, rows: res.rows });
+  st.trace = { task, rows: res.rows, pick: res.pick };
+  return true;
+}
+
+function runAll() { stopAuto(); while (stepSim()) { } }
+function stopAuto() { if (st.timer) { clearInterval(st.timer); st.timer = null; } }
+function toggleAuto() {
+  if (st.timer) { stopAuto(); return; }
+  st.timer = setInterval(() => { if (!stepSim()) stopAuto(); render(); }, 850);
+}
+
+function metrics() { return computeMetrics(st.servers, st.tasks, st.sim.usage, st.sim.status, st.cmp); }
+
+/* ---------- shared pieces ---------- */
+function meter(label, used, total, unit) {
+  const p = total ? used / total * 100 : 0;
+  const cls = p >= 100 ? 'full' : p >= 85 ? 'hi' : '';
+  return `<div class="meter"><div class="mrow"><span>${label}</span><span class="num">${used} / ${total} ${unit} · ${pct(p)}</span></div><div class="bar"><i class="${cls}" style="width:${Math.min(100, p)}%"></i></div></div>`;
+}
+function serverStatus(s) { return s.off ? 'off' : st.sim.usage[s.id].tasks.length ? 'active' : 'idle'; }
+function serverCard(s, mark) {
+  const u = st.sim.usage[s.id], status = serverStatus(s);
+  const cls = ['srv', s.off ? 'off' : '', mark || ''].join(' ');
+  const chips = u.tasks.length ? u.tasks.map(t => `<span class="chip">${t}</span>`).join('') : '<span class="none">No tasks</span>';
+  return `<article class="${cls}"><header><h3>${esc(s.name)}</h3><span class="pill ${status}">${status}</span></header>${meter('CPU', u.cpu, s.cpu, 'cores')}${meter('Memory', u.mem, s.mem, 'GB')}<div class="chips">${chips}</div></article>`;
+}
+function statusPill(s) { return `<span class="pill ${s}">${s}</span>`; }
+function head(title, text, right) { return `<div class="head"><div><h1>${title}</h1><p>${text}</p></div>${right || ''}</div>`; }
+
+function hbar(title, items, max, fmt, scale) {
+  const rows = items.map(i => `<div class="crow"><span class="nm" title="${esc(i.label)}">${esc(i.label)}</span><div class="track"><i style="width:${max ? Math.min(100, i.value / max * 100) : 0}%;--c:${i.color || 'var(--accent)'}"></i></div><span class="val">${fmt(i.value)}</span></div>`).join('');
+  return `<div class="chart"><h3>${title}<span>${scale}</span></h3>${rows}</div>`;
+}
+
+/* ---------- views ---------- */
+function viewDashboard() {
+  const m = metrics();
+  const on = st.servers.filter(s => !s.off).length;
+  const stat = (label, v, sub, cls) => `<div class="stat ${cls || ''}"><span class="eyebrow">${label}</span><span class="v">${v}</span><span class="s">${sub}</span></div>`;
+  const util = st.servers.map(s => {
+    const u = st.sim.usage[s.id];
+    return [{ label: s.name + ' CPU', value: u.cpu / s.cpu * 100, color: 'var(--accent)' }, { label: s.name + ' Mem', value: u.mem / s.mem * 100, color: 'var(--s-best)' }];
+  }).flat();
+  const out = [{ label: 'Allocated', value: m.allocated, color: 'var(--good)' }, { label: 'Rejected', value: m.rejected, color: 'var(--bad)' }, { label: 'Waiting', value: m.waiting, color: 'var(--warn)' }];
+  return head('Data center overview', `Showing the last run with ${algoName(st.algo)} on ${st.servers.length} servers and ${st.tasks.length} tasks. Change the algorithm in the Simulator.`) +
+    `<div class="stats">
+      ${stat('Servers', st.servers.length, `${on} powered on · ${m.capCpu} cores · ${m.capMem} GB`)}
+      ${stat('Tasks', m.total, `${m.waiting} waiting`)}
+      ${stat('Allocated', m.allocated, `${pct(m.successRate)} success rate`, 'good')}
+      ${stat('Rejected', m.rejected, 'no server had room', m.rejected ? 'bad' : '')}
+      ${stat('CPU use', pct(m.cpuUtil), `${m.usedCpu} of ${m.capCpu} cores`)}
+      ${stat('Memory use', pct(m.memUtil), `${m.usedMem} of ${m.capMem} GB`)}
+    </div>
+    <section class="panel"><h2>Server status</h2><div class="servers">${st.servers.map(s => serverCard(s)).join('') || '<p class="none">No servers yet. Add one on the Servers page.</p>'}</div></section>
+    <div class="split even">
+      <section class="panel"><div class="chart">${hbar('Utilization by server', util, 100, pct, '0 to 100%')}</div></section>
+      <section class="panel"><div class="chart">${hbar('Task outcomes', out, Math.max(1, m.total), v => v, `0 to ${m.total} tasks`)}</div>
+        <p class="note">Figures come from the simulation you ran. They are not results from the research paper.</p></section>
+    </div>`;
+}
+
+function viewServers() {
+  const rows = st.servers.map(s => {
+    const u = st.sim.usage[s.id], status = serverStatus(s);
+    return `<tr><td><b>${esc(s.name)}</b></td>
+      <td><input type="number" min="1" step="1" id="cpu-${s.id}" value="${s.cpu}" data-chg="srv-cpu" data-id="${s.id}" aria-label="CPU cores for ${esc(s.name)}"></td>
+      <td><input type="number" min="1" step="1" id="mem-${s.id}" value="${s.mem}" data-chg="srv-mem" data-id="${s.id}" aria-label="Memory in GB for ${esc(s.name)}"></td>
+      <td class="num">${s.cpu - u.cpu} cores · ${s.mem - u.mem} GB</td>
+      <td>${statusPill(status)}</td>
+      <td class="num">${u.tasks.length}</td>
+      <td><label class="chk"><input type="checkbox" id="pw-${s.id}" ${s.off ? '' : 'checked'} data-chg="srv-power" data-id="${s.id}"> On</label></td>
+      <td><button class="btn danger" id="rm-${s.id}" data-act="srv-remove" data-id="${s.id}">Remove</button></td></tr>`;
+  }).join('');
+  return head('Servers', 'Set the capacity of each server. Any change resets the simulation so every run starts from empty servers.') +
+    `<section class="panel"><h2>Add a server</h2>
+      <div class="row">
+        <div class="field"><label for="new-cpu">CPU cores</label><input type="number" id="new-cpu" min="1" step="1" value="8"></div>
+        <div class="field"><label for="new-mem">Memory (GB)</label><input type="number" id="new-mem" min="1" step="1" value="16"></div>
+        <button class="btn primary" id="add-srv" data-act="srv-add">Add server</button>
+        <button class="btn" id="reset-srv" data-act="srv-reset">Restore the four default servers</button>
+      </div><p class="err" role="alert">${esc(st.error)}</p></section>
+    <section class="panel"><h2>Fleet</h2><div class="tablewrap"><table>
+      <thead><tr><th>Server</th><th>CPU cores</th><th>Memory GB</th><th>Available now</th><th>Status</th><th>Tasks</th><th>Power</th><th></th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="8" class="none">No servers. Add one above.</td></tr>'}</tbody></table></div>
+      <p class="note">A server is Active when it holds at least one task, Idle when it is on but empty, and Off when switched off. Off servers never receive tasks.</p></section>`;
+}
+
+function viewTasks() {
+  const sim = st.sim;
+  const rows = st.tasks.map(t => {
+    const sv = st.servers.find(s => s.id === sim.assigned[t.id]);
+    return `<tr><td class="num">${t.id}</td><td>${esc(t.name)}</td><td class="num r">${t.cpu}</td><td class="num r">${t.mem}</td><td>${statusPill(sim.status[t.id])}</td><td>${sv ? esc(sv.name) : '<span class="none">None</span>'}</td><td><button class="btn danger" id="rmt-${t.id}" data-act="task-remove" data-id="${t.id}">Remove</button></td></tr>`;
+  }).join('');
+  return head('Tasks', 'Each task asks for CPU cores and memory. Tasks stay Waiting until you run the simulator.') +
+    `<section class="panel"><h2>Add a task</h2>
+      <div class="row">
+        <div class="field"><label for="t-name">Task name</label><input class="w-name" type="text" id="t-name" placeholder="Video Processing" maxlength="40"></div>
+        <div class="field"><label for="t-cpu">CPU cores</label><input type="number" id="t-cpu" min="1" step="1" value="4"></div>
+        <div class="field"><label for="t-mem">Memory (GB)</label><input type="number" id="t-mem" min="1" step="1" value="8"></div>
+        <button class="btn primary" id="add-task" data-act="task-add">Add task</button>
+      </div><p class="err" role="alert">${esc(st.error)}</p>
+      <div class="row"><span class="note">Workloads:</span>
+        <button class="btn" id="load-sample" data-act="load-sample">Load sample (10 tasks)</button>
+        <button class="btn" id="load-over" data-act="load-over">Load overload (16 tasks)</button>
+        <button class="btn danger" id="clear-tasks" data-act="clear-tasks">Clear all</button></div></section>
+    <section class="panel"><h2>Task queue <span class="note">· ${st.tasks.length} tasks</span></h2><div class="tablewrap"><table>
+      <thead><tr><th>ID</th><th>Name</th><th class="r">CPU</th><th class="r">Memory GB</th><th>Status</th><th>Server</th><th></th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="7" class="none">The queue is empty. Add a task or load a workload.</td></tr>'}</tbody></table></div></section>`;
+}
+
+function traceHtml() {
+  const tr = st.trace;
+  if (!tr) return `<p class="none">Press Step to watch the scheduler place the next waiting task. Each server is checked for CPU and memory, then ${algoName(st.algo)} picks one.</p>`;
+  const t = tr.task;
+  const rows = tr.rows.map(r => {
+    const picked = tr.pick && tr.pick.id === r.id;
+    const cls = picked ? 'pick' : r.eligible ? 'ok' : 'no';
+    const d = r.eligible ? `eligible · fit score ${r.score.toFixed(2)} · after placement ${r.aCpu - t.cpu} cores, ${r.aMem - t.mem} GB free` : r.reason;
+    return `<div class="tr-row ${cls}"><span class="l">${esc(r.name)}</span><span class="num">${r.aCpu} cores · ${r.aMem} GB free</span><span class="d">${picked ? '<b>Selected.</b> ' : ''}${d}</span></div>`;
+  }).join('');
+  let v;
+  if (tr.pick) {
+    const why = { first: 'it is the first eligible server', best: `it has the lowest fit score (${tr.pick.score.toFixed(2)})`, worst: `it has the highest fit score (${tr.pick.score.toFixed(2)})`, random: 'it was drawn at random from the eligible servers', balanced: `its CPU and memory occupancy end up closest together (gap ${(tr.pick.imbalance * 100).toFixed(0)} points)` }[st.algo];
+    const s = st.servers.find(x => x.id === tr.pick.id);
+    v = `<div class="verdict">${algoName(st.algo)} chose <b>${esc(s.name)}</b> because ${why}. CPU ${tr.pick.aCpu} → ${tr.pick.aCpu - t.cpu}, memory ${tr.pick.aMem} → ${tr.pick.aMem - t.mem}.</div>`;
+  } else v = `<div class="verdict bad">No server has enough CPU and memory. ${esc(t.id)} is rejected.</div>`;
+  return `<div class="trace"><div><span class="eyebrow">Incoming task</span><div class="task">${t.id} · ${esc(t.name)} <span class="num">needs ${t.cpu} cores, ${t.mem} GB</span></div></div>${rows}${v}</div>`;
+}
+
+function viewSimulator() {
+  const sim = st.sim, tr = st.trace;
+  const waiting = st.tasks.filter(t => sim.status[t.id] === 'waiting').length;
+  const cards = st.servers.map(s => {
+    let mark = '';
+    if (tr) { const r = tr.rows.find(x => x.id === s.id); mark = tr.pick && tr.pick.id === s.id ? 'picked' : r && r.eligible ? 'elig' : 'inelig'; }
+    return serverCard(s, mark);
+  }).join('');
+  const opts = ALGOS.map(a => `<option value="${a.id}" ${a.id === st.algo ? 'selected' : ''}>${a.name}</option>`).join('');
+  const qrows = st.tasks.map(t => `<tr><td class="num">${t.id}</td><td>${esc(t.name)}</td><td class="num r">${t.cpu}</td><td class="num r">${t.mem}</td><td>${statusPill(sim.status[t.id])}</td></tr>`).join('');
+  const hrows = sim.log.slice().reverse().map(l => `<tr><td class="num">${l.n}</td><td>${l.task.id} ${esc(l.task.name)}</td><td>${l.pick ? esc(st.servers.find(s => s.id === l.pick.id).name) : '<span class="pill rejected">rejected</span>'}</td><td class="num r">${l.pick ? l.pick.aCpu - l.task.cpu + ' / ' + (l.pick.aMem - l.task.mem) : ''}</td></tr>`).join('');
+  const alg = ALGOS.map(a => `<div><b><span class="algo-dot" style="--c:${SERIES[a.id]}"></span>${a.name}</b><span>${a.blurb}</span></div>`).join('');
+  return head('Allocation simulator', 'Pick an algorithm, then step through the queue or run it all at once. Changing the algorithm restarts from empty servers.',
+    `<div class="row">
+      <div class="field"><label for="algo">Algorithm</label><select id="algo" data-chg="algo">${opts}</select></div>
+      <button class="btn primary" id="run" data-act="run" ${waiting ? '' : 'disabled'}>Run simulation</button>
+      <button class="btn" id="step" data-act="step" ${waiting ? '' : 'disabled'}>Step</button>
+      <button class="btn" id="auto" data-act="auto" ${waiting ? '' : 'disabled'}>${st.timer ? 'Pause' : 'Auto-play'}</button>
+      <button class="btn" id="reset" data-act="reset">Reset</button></div>`) +
+    `<div class="split"><section class="panel"><h2>Servers <span class="note">· ${waiting} waiting</span></h2><div class="servers">${cards}</div></section>
+      <section class="panel"><h2>Current decision</h2>${traceHtml()}</section></div>
+    <div class="split even"><section class="panel"><h2>Task queue</h2><div class="tablewrap"><table><thead><tr><th>ID</th><th>Name</th><th class="r">CPU</th><th class="r">GB</th><th>Status</th></tr></thead><tbody>${qrows || '<tr><td colspan="5" class="none">No tasks. Add some on the Tasks page.</td></tr>'}</tbody></table></div></section>
+      <section class="panel"><h2>Allocation history</h2><div class="tablewrap"><table><thead><tr><th>#</th><th>Task</th><th>Server</th><th class="r">Left CPU / GB</th></tr></thead><tbody>${hrows || '<tr><td colspan="4" class="none">Nothing placed yet.</td></tr>'}</tbody></table></div></section></div>
+    <section class="panel"><h2>How each algorithm decides</h2><div class="alist">${alg}</div>
+      <p class="note">A server is eligible only if available CPU ≥ required CPU and available memory ≥ required memory. Fit score = ((CPU free − CPU needed) ÷ CPU free + (memory free − memory needed) ÷ memory free) ÷ 2. Balanced-Fit compares |CPU occupancy − memory occupancy| after placement.</p></section>`;
+}
+
+function viewCompare() {
+  const c = st.cmp;
+  const ids = ALGOS.filter(a => c.sel[a.id]).map(a => a.id);
+  const res = ids.map(id => {
+    const r = runWorkload(st.servers, st.tasks, id, 42);
+    return { id, r, m: computeMetrics(st.servers, st.tasks, r.usage, r.status, c) };
+  });
+  const best = (key, dir) => { if (!res.length) return null; const vals = res.map(x => x.m[key]); return dir > 0 ? Math.max(...vals) : Math.min(...vals); };
+  const bs = best('successRate', 1), br = best('rejected', -1), bp = best('power', -1);
+  const th = res.map(x => `<th class="r"><span class="algo-dot" style="--c:${SERIES[x.id]}"></span>${algoName(x.id)}</th>`).join('');
+  const mrow = (label, f, key, bestV) => `<tr><td>${label}</td>${res.map(x => `<td class="num r ${bestV != null && Math.abs(x.m[key] - bestV) < 1e-9 ? 'best' : ''}">${f(x.m[key])}</td>`).join('')}</tr>`;
+  const items = key => res.map(x => ({ label: algoName(x.id), value: x.m[key], color: SERIES[x.id] }));
+  const maxP = Math.max(1, ...res.map(x => x.m.power));
+  const prow = st.tasks.map(t => `<tr><td class="num">${t.id}</td>${res.map(x => { const sid = x.r.assigned[t.id]; const s = st.servers.find(q => q.id === sid); return `<td>${s ? esc(s.name) : '<span class="pill rejected">rejected</span>'}</td>`; }).join('')}</tr>`).join('');
+  const checks = ALGOS.map(a => `<label class="chk"><input type="checkbox" id="sel-${a.id}" ${c.sel[a.id] ? 'checked' : ''} data-chg="cmp-sel" data-id="${a.id}"><span class="algo-dot" style="--c:${SERIES[a.id]}"></span>${a.name}</label>`).join('');
+  const body = res.length && st.tasks.length ? `
+    <section class="panel"><h2>Results</h2><div class="tablewrap"><table><thead><tr><th>Metric</th>${th}</tr></thead><tbody>
+      ${mrow('Allocated tasks', v => v, 'allocated')}
+      ${mrow('Allocation success rate', pct, 'successRate', bs)}
+      ${mrow('Rejected tasks', v => v, 'rejected', br)}
+      ${mrow('CPU utilization', pct, 'cpuUtil')}
+      ${mrow('Memory utilization', pct, 'memUtil')}
+      ${mrow('Servers in use', v => v, 'active')}
+      ${mrow('Estimated power (W)', v => Math.round(v), 'power', bp)}
+      </tbody></table></div><p class="note">Green marks the best value for success rate, rejected tasks and power. Utilization measures allocated capacity, so it rises with the number of tasks that fit.</p></section>
+    <section class="panel"><div class="charts">
+      ${hbar('Allocation success rate', items('successRate'), 100, pct, '0 to 100%')}
+      ${hbar('Rejected tasks', items('rejected'), Math.max(1, st.tasks.length), v => v, `0 to ${st.tasks.length}`)}
+      ${hbar('CPU utilization', items('cpuUtil'), 100, pct, '0 to 100%')}
+      ${hbar('Memory utilization', items('memUtil'), 100, pct, '0 to 100%')}
+      ${hbar('Estimated power', items('power'), maxP, v => Math.round(v) + ' W', `0 to ${Math.round(maxP)} W`)}
+    </div></section>
+    <section class="panel"><h2>Where each task went</h2><div class="tablewrap"><table><thead><tr><th>Task</th>${res.map(x => `<th>${algoName(x.id)}</th>`).join('')}</tr></thead><tbody>${prow}</tbody></table></div></section>`
+    : `<section class="panel"><p class="none">Select at least one algorithm and make sure the task queue is not empty.</p></section>`;
+  return head('Algorithm comparison', 'Every selected algorithm replays the same task list on the same empty servers. All values are calculated here, none are typed in.') +
+    `<section class="panel"><h2>Settings</h2><div class="row">${checks}</div>
+      <div class="row">
+        <div class="field"><label for="p-idle">Idle power (W)</label><input type="number" id="p-idle" min="0" step="10" value="${c.pIdle}" data-chg="cmp-pidle"></div>
+        <div class="field"><label for="p-max">Max power (W)</label><input type="number" id="p-max" min="0" step="10" value="${c.pMax}" data-chg="cmp-pmax"></div>
+        <label class="chk"><input type="checkbox" id="p-down" ${c.powerDown ? 'checked' : ''} data-chg="cmp-down"> Power off servers with no tasks</label>
+      </div><p class="note">Power per active server = idle + (max − idle) × CPU utilization. These are assumed illustrative values, not the paper's energy model. Random uses a fixed seed.</p></section>` + body;
+}
+
+/* ---------- render & events ---------- */
+function render() {
+  const fid = document.activeElement && document.activeElement.id;
+  document.getElementById('nav').innerHTML = VIEWS.map(v => `<a href="#${v[0]}" ${v[0] === st.view ? 'aria-current="page"' : ''}>${v[1]}</a>`).join('');
+  const fn = { dashboard: viewDashboard, servers: viewServers, tasks: viewTasks, simulator: viewSimulator, compare: viewCompare }[st.view];
+  document.getElementById('app').innerHTML = fn();
+  if (fid) { const el = document.getElementById(fid); if (el && !el.disabled) el.focus(); }
+}
+
+function route() {
+  const h = location.hash.slice(1);
+  st.view = VIEWS.some(v => v[0] === h) ? h : 'dashboard';
+  st.error = '';
+  if (st.view !== 'simulator') stopAuto();
+  render();
+}
+
+function restart() { initSim(); }
+function posInt(id) { const v = Number(document.getElementById(id).value); return Number.isInteger(v) && v >= 1 ? v : null; }
+
+document.getElementById('app').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const act = b.dataset.act, id = b.dataset.id;
+  st.error = '';
+  if (act === 'srv-add') {
+    const cpu = posInt('new-cpu'), mem = posInt('new-mem');
+    if (!cpu || !mem) st.error = 'Enter whole numbers of 1 or more for CPU cores and memory.'; else { addServer(cpu, mem); restart(); }
+  } else if (act === 'srv-reset') { resetServers(); restart(); }
+  else if (act === 'srv-remove') { st.servers = st.servers.filter(s => String(s.id) !== id); restart(); }
+  else if (act === 'task-add') {
+    const cpu = posInt('t-cpu'), mem = posInt('t-mem');
+    const name = document.getElementById('t-name').value.trim() || 'Task ' + st.nextTask;
+    if (!cpu || !mem) st.error = 'Enter whole numbers of 1 or more for CPU cores and memory.'; else { addTask(name, cpu, mem); restart(); }
+  } else if (act === 'task-remove') { st.tasks = st.tasks.filter(t => t.id !== id); restart(); }
+  else if (act === 'load-sample') { loadTasks(SAMPLE); restart(); }
+  else if (act === 'load-over') { loadTasks(OVERLOAD); restart(); }
+  else if (act === 'clear-tasks') { loadTasks([]); restart(); }
+  else if (act === 'run') runAll();
+  else if (act === 'step') { stopAuto(); stepSim(); }
+  else if (act === 'auto') toggleAuto();
+  else if (act === 'reset') restart();
+  render();
+});
+
+document.getElementById('app').addEventListener('change', e => {
+  const el = e.target, k = el.dataset.chg;
+  if (!k) return;
+  const id = el.dataset.id;
+  st.error = '';
+  if (k === 'algo') { st.algo = el.value; restart(); }
+  else if (k === 'srv-cpu' || k === 'srv-mem') {
+    const v = Number(el.value), s = st.servers.find(x => String(x.id) === id);
+    if (s && Number.isInteger(v) && v >= 1) { s[k === 'srv-cpu' ? 'cpu' : 'mem'] = v; restart(); }
+  } else if (k === 'srv-power') { st.servers.find(x => String(x.id) === id).off = !el.checked; restart(); }
+  else if (k === 'cmp-sel') st.cmp.sel[id] = el.checked;
+  else if (k === 'cmp-pidle') st.cmp.pIdle = Math.max(0, Number(el.value) || 0);
+  else if (k === 'cmp-pmax') st.cmp.pMax = Math.max(0, Number(el.value) || 0);
+  else if (k === 'cmp-down') st.cmp.powerDown = el.checked;
+  if (st.cmp.pMax < st.cmp.pIdle) st.cmp.pMax = st.cmp.pIdle;
+  render();
+});
+
+resetServers();
+loadTasks(SAMPLE);
+initSim();
+runAll();
+window.addEventListener('hashchange', route);
+route();
 </script>
-</body>
-</html>
+
+</body></html>
